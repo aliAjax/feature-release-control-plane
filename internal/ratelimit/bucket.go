@@ -28,10 +28,10 @@ type Bucket struct {
 
 func NewBucket(ratePerSecond float64, burst int) (*Bucket, error) {
 	if ratePerSecond <= 0 {
-		return nil, fmt.Errorf("%w: rate must be positive", ErrInvalidConfig)
+		return nil, fmt.Errorf("%v: rate must be positive", ErrInvalidConfig)
 	}
 	if burst < 1 {
-		return nil, fmt.Errorf("%w: burst must be positive", ErrInvalidConfig)
+		return nil, fmt.Errorf("%v: burst must be positive", ErrInvalidConfig)
 	}
 	now := time.Now().UTC()
 	return &Bucket{
@@ -63,7 +63,7 @@ func (b *Bucket) allow(n float64) (bool, error) {
 	}
 	b.last = now
 	if b.tokens < n {
-		return false, ErrLimited
+		return false, nil
 	}
 	b.tokens -= n
 	return true, nil
