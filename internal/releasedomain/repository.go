@@ -34,6 +34,10 @@ func (m *MemoryRepository) Create(_ context.Context, r Release) error {
 	if _, ok := m.releases[r.ID]; ok {
 		return fmt.Errorf("%w: release", httpx.ErrConflict)
 	}
+	// Defensive copy so callers cannot mutate the stored release through the
+	// input slices after Create returns.
+	r.VersionRefs = append([]VersionRef(nil), r.VersionRefs...)
+	r.Waves = append([]Wave(nil), r.Waves...)
 	m.releases[r.ID] = r
 	if r.IdempotencyKey != "" {
 		m.idempotency[r.IdempotencyKey] = r.ID
@@ -47,6 +51,8 @@ func (m *MemoryRepository) Get(_ context.Context, id string) (Release, error) {
 	if !ok {
 		return r, fmt.Errorf("%w: release", httpx.ErrNotFound)
 	}
+	r.VersionRefs = append([]VersionRef(nil), r.VersionRefs...)
+	r.Waves = append([]Wave(nil), r.Waves...)
 	return r, nil
 }
 func (m *MemoryRepository) Update(_ context.Context, r Release, expected int64) error {
