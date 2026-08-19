@@ -374,6 +374,17 @@ func (s *Service) AdvanceReleases(ctx context.Context) error {
 					_, _ = s.TransitionVersion(ctx, "scheduler", ref.ConfigID, ref.Version, configdomain.RollingOut, v.Revision)
 				}
 			}
+		case releasedomain.Retrying:
+			next, e := s.TransitionRelease(ctx, "scheduler", r.ID, releasedomain.Running, "", r.FencingToken+1)
+			if e != nil {
+				continue
+			}
+			for _, ref := range next.VersionRefs {
+				v, e := s.configs.GetVersion(ctx, ref.ConfigID, ref.Version)
+				if e == nil && v.State == configdomain.Scheduled {
+					_, _ = s.TransitionVersion(ctx, "scheduler", ref.ConfigID, ref.Version, configdomain.RollingOut, v.Revision)
+				}
+			}
 		case releasedomain.Running:
 			if r.CurrentWave+1 < len(r.Waves) {
 				r.CurrentWave++
@@ -410,7 +421,7 @@ func (s *Service) RetryRelease(ctx context.Context, actor, id string) (releasedo
 	if r.State != releasedomain.Failed {
 		return r, fmt.Errorf("%w: only failed releases can be retried", httpx.ErrPrecondition)
 	}
-	next, err := r.Transition(releasedomain.Running, r.FencingToken+1, s.clock.Now())
+	next, err := r.Transition(releasedomain.Retrying, r.FencingToken+1, s.clock.Now())
 	if err != nil {
 		return r, err
 	}
