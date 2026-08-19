@@ -126,8 +126,6 @@ func (m *Memory) ListVersions(_ context.Context, id string) ([]configdomain.Conf
 	defer m.mu.RUnlock()
 	all := []configdomain.ConfigVersion{}
 	for _, v := range m.versions[id] {
-		v.Rules = append([]configdomain.TargetRule(nil), v.Rules...)
-		v.Dependencies = append([]configdomain.Dependency(nil), v.Dependencies...)
 		all = append(all, v)
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].Number < all[j].Number })
@@ -161,8 +159,6 @@ func (m *Memory) Published(_ context.Context, s configdomain.Scope) ([]configdom
 			}
 		}
 		if best.Number > 0 {
-			best.Rules = append([]configdomain.TargetRule(nil), best.Rules...)
-			best.Dependencies = append([]configdomain.Dependency(nil), best.Dependencies...)
 			result = append(result, best)
 		}
 	}

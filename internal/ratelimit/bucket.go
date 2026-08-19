@@ -63,7 +63,7 @@ func (b *Bucket) allow(n float64) (bool, error) {
 	}
 	b.last = now
 	if b.tokens < n {
-		return false, ErrLimited
+		return false, nil
 	}
 	b.tokens -= n
 	return true, nil
