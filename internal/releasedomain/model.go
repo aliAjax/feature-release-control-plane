@@ -16,7 +16,6 @@ const (
 	Failed     State = "failed"
 	RolledBack State = "rolled_back"
 	Cancelled  State = "cancelled"
-	Retrying   State = "retrying"
 )
 
 var ErrTransition = errors.New("invalid release transition")
@@ -72,7 +71,7 @@ func (r Release) Validate() error {
 	return nil
 }
 func (r Release) Can(to State) bool {
-	allowed := map[State]map[State]bool{Pending: {Running: true, Cancelled: true}, Running: {Paused: true, Succeeded: true, Failed: true, RolledBack: true}, Paused: {Running: true, Cancelled: true, RolledBack: true}, Succeeded: {RolledBack: true}, Failed: {Retrying: true, RolledBack: true}, RolledBack: {}, Cancelled: {}, Retrying: {Running: true, Cancelled: true}}
+	allowed := map[State]map[State]bool{Pending: {Running: true, Cancelled: true}, Running: {Paused: true, Succeeded: true, Failed: true, RolledBack: true}, Paused: {Running: true, Cancelled: true, RolledBack: true}, Succeeded: {RolledBack: true}, Failed: {RolledBack: true}, RolledBack: {}, Cancelled: {}}
 	return allowed[r.State][to]
 }
 func (r Release) Transition(to State, token int64, now time.Time) (Release, error) {
