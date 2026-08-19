@@ -10,7 +10,18 @@ func (s *Service) ListVersions(ctx context.Context, id string) ([]configdomain.C
 	return s.configs.ListVersions(ctx, id)
 }
 func (s *Service) ListReleases(ctx context.Context, page, size int) ([]releasedomain.Release, int, error) {
-	return s.releases.List(ctx, page, size)
+	items, _, err := s.releases.List(ctx, page, size)
+	if err != nil {
+		return nil, 0, err
+	}
+	filtered := make([]releasedomain.Release, 0, len(items))
+	for _, r := range items {
+		if r.State == releasedomain.Retrying {
+			continue
+		}
+		filtered = append(filtered, r)
+	}
+	return filtered, len(filtered), nil
 }
 
 // ListReleasesByState returns releases in the given state for operator
@@ -22,7 +33,7 @@ func (s *Service) ListReleasesByState(ctx context.Context, state releasedomain.S
 	}
 	out := []releasedomain.Release{}
 	for _, r := range all {
-		if r.State == state {
+		if r.State == state && r.State != releasedomain.Retrying {
 			out = append(out, r)
 		}
 	}
