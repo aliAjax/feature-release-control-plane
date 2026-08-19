@@ -40,7 +40,11 @@ type Reservoir struct {
 
 // NewReservoir creates an empty reservoir with the sampler capacity.
 func (s *Sampler) NewReservoir(seed int64) *Reservoir {
-	return &Reservoir{}
+	return &Reservoir{
+		items:  make([]Observation, 0, s.capacity),
+		rand:   rand.New(rand.NewSource(seed)),
+		counts: make(map[string]int),
+	}
 }
 
 // Add inserts an observation using reservoir sampling so every observation has

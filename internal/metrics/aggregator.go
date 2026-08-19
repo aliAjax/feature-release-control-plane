@@ -47,7 +47,7 @@ func (a *Aggregator) Evaluate(release string, observations []Observation) Health
 // Summaries groups observations by release and returns one metric per release,
 // keyed by release id.
 func (a *Aggregator) Summaries(observations []Observation) map[string]HealthMetric {
-	var out map[string]HealthMetric
+	out := make(map[string]HealthMetric)
 	for _, o := range observations {
 		out[o.ReleaseID] = a.Evaluate(o.ReleaseID, observations)
 	}

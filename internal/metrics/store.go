@@ -13,8 +13,9 @@ type Store struct {
 
 func NewStore(sampler *Sampler, seed int64) *Store {
 	return &Store{
-		sampler: sampler,
-		seed:    seed,
+		sampler:    sampler,
+		seed:       seed,
+		reservoirs: make(map[string]*Reservoir),
 	}
 }
 
