@@ -95,6 +95,8 @@ func validKey(s string) bool {
 // SortedConfigs returns drafts ordered by key. Callers use it to guarantee a
 // deterministic import order for audit and diff purposes.
 func (d Document) SortedConfigs() []ConfigDraft {
-	sort.Slice(d.Configs, func(i, j int) bool { return d.Configs[i].Key < d.Configs[j].Key })
-	return d.Configs
+	sorted := make([]ConfigDraft, len(d.Configs))
+	copy(sorted, d.Configs)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Key < sorted[j].Key })
+	return sorted
 }
