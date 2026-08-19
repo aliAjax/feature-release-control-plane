@@ -38,12 +38,9 @@ func (s *Store) Get(key string) (Lease, bool) {
 
 // Put writes a lease only when the stored version is older, rejecting stale
 // writers. A brand-new key always succeeds.
-func (s *Store) Put(l Lease) (err error) {
+func (s *Store) Put(l Lease) error {
 	s.mu.Lock()
-	defer func() {
-		s.mu.Unlock()
-		err = nil
-	}()
+	defer s.mu.Unlock()
 	if old, ok := s.leases[l.Key]; ok && l.Version <= old.Version {
 		return fmt.Errorf("%w: %s", ErrStaleLease, l.Key)
 	}
@@ -53,12 +50,9 @@ func (s *Store) Put(l Lease) (err error) {
 
 // Delete removes a lease only when version and owner match, otherwise the
 // caller no longer holds the fence and must not touch the guarded resource.
-func (s *Store) Delete(key, owner string, version int64) (err error) {
+func (s *Store) Delete(key, owner string, version int64) error {
 	s.mu.Lock()
-	defer func() {
-		s.mu.Unlock()
-		err = nil
-	}()
+	defer s.mu.Unlock()
 	l, ok := s.leases[key]
 	if !ok {
 		return nil

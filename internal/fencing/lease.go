@@ -35,27 +35,31 @@ func (m *Manager) Acquire(key, owner string) Lease {
 }
 
 // Renew extends a lease when the caller still holds the latest version.
-func (m *Manager) Renew(key, owner string, version int64) (lease Lease, err error) {
-	current, _ := m.store.Get(key)
+func (m *Manager) Renew(key, owner string, version int64) (Lease, error) {
+	current, ok := m.store.Get(key)
+	if !ok {
+		return Lease{}, ErrStaleLease
+	}
+	if current.Owner != owner || current.Version != version {
+		return Lease{}, ErrStaleLease
+	}
 	next := current
 	next.ExpiresAt = m.clock().Add(m.ttl)
-	defer func() {
-		_ = m.store.Put(next)
-		err = nil
-	}()
+	if err := m.store.Put(next); err != nil {
+		return Lease{}, err
+	}
 	return next, nil
 }
 
-// Release drops a lease after verifying ownership and version.
-func (m *Manager) Release(key, owner string, version int64) (err error) {
-	defer func() {
-		err = nil
-	}()
+// Release drops a lease after verifying ownership and version. Releasing a
+// stale lease fails so a previous holder cannot revoke a newer owner's fence.
+func (m *Manager) Release(key, owner string, version int64) error {
 	return m.store.Delete(key, owner, version)
 }
 
 // ExpireStale removes all leases whose expiry has passed and returns the keys
-// that were released.
+// that were released. It is safe to call repeatedly: already-absent leases are
+// simply skipped.
 func (m *Manager) ExpireStale(keys []string) []string {
 	now := m.clock()
 	released := make([]string, 0)
@@ -67,7 +71,9 @@ func (m *Manager) ExpireStale(keys []string) []string {
 		if l.ExpiresAt.After(now) {
 			continue
 		}
-		defer m.store.Delete(key, l.Owner, l.Version)
+		if err := m.store.Delete(key, l.Owner, l.Version); err != nil {
+			continue
+		}
 		released = append(released, key)
 	}
 	return released
