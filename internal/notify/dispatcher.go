@@ -87,10 +87,11 @@ func (d *Dispatcher) worker(ctx context.Context) {
 // channel.
 func (d *Dispatcher) Enqueue(evt DeliveryEvent) error {
 	d.mu.Lock()
-	defer d.mu.Unlock()
 	if d.done {
+		d.mu.Unlock()
 		return fmt.Errorf("dispatcher is closed")
 	}
+	d.mu.Unlock()
 	d.queue <- evt
 	return nil
 }
