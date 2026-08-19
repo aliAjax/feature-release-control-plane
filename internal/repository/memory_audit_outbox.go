@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -43,6 +44,8 @@ func (m *Memory) Append(_ context.Context, r audit.Record) error {
 	return nil
 }
 func (m *Memory) ListAudit(_ context.Context, scope string, page, size int) ([]audit.Record, int, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	all := []audit.Record{}
 	for _, r := range m.audits {
 		if scope == "" || r.Scope == scope {
@@ -68,7 +71,14 @@ func (m *Memory) ListAuditFiltered(_ context.Context, query audit.Query, page, s
 }
 
 func (m *Memory) ListAuditAll(_ context.Context) ([]audit.Record, error) {
-	return m.audits, nil
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	all := make([]audit.Record, len(m.audits))
+	for i, r := range m.audits {
+		r.Metadata = append(json.RawMessage(nil), r.Metadata...)
+		all[i] = r
+	}
+	return all, nil
 }
 func (m *Memory) Add(_ context.Context, e OutboxEvent) error {
 	m.mu.Lock()

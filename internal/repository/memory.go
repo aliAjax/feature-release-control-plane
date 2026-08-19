@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/example/feature-release-control-plane/internal/audit"
@@ -60,12 +61,15 @@ func (m *Memory) Get(_ context.Context, id string) (configdomain.Config, error) 
 	return c, nil
 }
 func (m *Memory) List(_ context.Context, s configdomain.Scope, page, size int) ([]configdomain.Config, int, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	all := []configdomain.Config{}
 	for _, c := range m.configs {
 		if c.Scope == s {
 			all = append(all, c)
 		}
 	}
+	sort.Slice(all, func(i, j int) bool { return all[i].Key < all[j].Key })
 	return pageOf(all, page, size)
 }
 func pageOf[T any](items []T, page, size int) ([]T, int, error) {
@@ -118,10 +122,15 @@ func (m *Memory) GetVersion(_ context.Context, id string, num int64) (configdoma
 	return v, nil
 }
 func (m *Memory) ListVersions(_ context.Context, id string) ([]configdomain.ConfigVersion, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	all := []configdomain.ConfigVersion{}
 	for _, v := range m.versions[id] {
+		v.Rules = append([]configdomain.TargetRule(nil), v.Rules...)
+		v.Dependencies = append([]configdomain.Dependency(nil), v.Dependencies...)
 		all = append(all, v)
 	}
+	sort.Slice(all, func(i, j int) bool { return all[i].Number < all[j].Number })
 	return all, nil
 }
 func (m *Memory) UpdateVersion(_ context.Context, v configdomain.ConfigVersion, expected int64) error {
@@ -138,6 +147,8 @@ func (m *Memory) UpdateVersion(_ context.Context, v configdomain.ConfigVersion, 
 	return nil
 }
 func (m *Memory) Published(_ context.Context, s configdomain.Scope) ([]configdomain.ConfigVersion, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	result := []configdomain.ConfigVersion{}
 	for id, c := range m.configs {
 		if c.Scope != s || c.Archived {
@@ -150,8 +161,11 @@ func (m *Memory) Published(_ context.Context, s configdomain.Scope) ([]configdom
 			}
 		}
 		if best.Number > 0 {
+			best.Rules = append([]configdomain.TargetRule(nil), best.Rules...)
+			best.Dependencies = append([]configdomain.Dependency(nil), best.Dependencies...)
 			result = append(result, best)
 		}
 	}
+	sort.Slice(result, func(i, j int) bool { return result[i].ConfigID < result[j].ConfigID })
 	return result, nil
 }
