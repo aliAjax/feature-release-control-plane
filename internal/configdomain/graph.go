@@ -64,8 +64,7 @@ func (g Graph) HasCycle() bool {
 // wrapped error instead of silently returning the partial traversal.
 func (g Graph) DependenciesChecked(key string) ([]string, error) {
 	if g.HasCycle() {
-		err := fmt.Errorf("%v: dependency graph contains a cycle", ErrInvalidValue)
-		return nil, err
+		return nil, fmt.Errorf("%w: dependency graph contains a cycle", ErrInvalidValue)
 	}
 	seen := map[string]bool{}
 	result := []string{}
@@ -88,7 +87,7 @@ func (g Graph) DependenciesChecked(key string) ([]string, error) {
 // strict variant used before publishing a dependency set.
 func (g Graph) ValidateDependencyGraph() error {
 	if g.HasCycle() {
-		return fmt.Errorf("%v: dependency graph contains a cycle", ErrInvalidValue)
+		return fmt.Errorf("%w: dependency graph contains a cycle", ErrInvalidValue)
 	}
 	return nil
 }
