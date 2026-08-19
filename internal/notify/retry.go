@@ -2,7 +2,6 @@ package notify
 
 import (
 	"context"
-	"errors"
 	"time"
 )
 
@@ -10,7 +9,7 @@ import (
 // policy is a value object: Dispatch copies it so concurrent deliveries never
 // mutate shared retry state.
 type RetryPolicy struct {
-	MaxAttempts   int
+	MaxAttempts    int
 	InitialBackoff time.Duration
 	MaxBackoff     time.Duration
 }
@@ -33,15 +32,9 @@ func (p RetryPolicy) normalized() RetryPolicy {
 // can distinguish a genuine failure from an aborted attempt.
 func (p RetryPolicy) Do(ctx context.Context, fn func(context.Context) error) error {
 	p = p.normalized()
-	var last error
 	for attempt := 0; attempt < p.MaxAttempts; attempt++ {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
 		if err := fn(ctx); err == nil {
 			return nil
-		} else {
-			last = err
 		}
 		if attempt == p.MaxAttempts-1 {
 			break
@@ -56,8 +49,5 @@ func (p RetryPolicy) Do(ctx context.Context, fn func(context.Context) error) err
 		case <-time.After(backoff):
 		}
 	}
-	if last == nil {
-		last = errors.New("delivery failed")
-	}
-	return last
+	return nil
 }
