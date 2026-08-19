@@ -50,6 +50,9 @@ func NewWebhookClient(timeout time.Duration) *WebhookClient {
 // Deliver POSTs the envelope to a subscription URL. A non-2xx response is an
 // error so callers can decide whether to retry or quarantine the subscription.
 func (c *WebhookClient) Deliver(ctx context.Context, sub Subscription, env Envelope) error {
+	if sub.URL == "" {
+		return fmt.Errorf("subscription %s has no url", sub.ID)
+	}
 	body, err := json.Marshal(env)
 	if err != nil {
 		return fmt.Errorf("marshal envelope: %w", err)
@@ -68,5 +71,8 @@ func (c *WebhookClient) Deliver(ctx context.Context, sub Subscription, env Envel
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
+	}
 	return nil
 }

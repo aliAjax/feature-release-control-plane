@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -85,6 +86,11 @@ func (d *Dispatcher) worker(ctx context.Context) {
 // producers cannot race with the shutdown sequence and write to a closed
 // channel.
 func (d *Dispatcher) Enqueue(evt DeliveryEvent) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.done {
+		return fmt.Errorf("dispatcher is closed")
+	}
 	d.queue <- evt
 	return nil
 }
