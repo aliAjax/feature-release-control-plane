@@ -100,23 +100,3 @@ func contains(have, want map[string]string) bool {
 	}
 	return true
 }
-
-// EvaluateChecked evaluates rules and reports a malformed subject as a wrapped
-// error. Callers that need a hard failure instead of a silent no-match use it.
-func EvaluateChecked(rules []TargetRule, subject Subject, at time.Time) (Evaluation, error) {
-	if strings.TrimSpace(subject.TenantID) == "" {
-		return Evaluation{}, fmt.Errorf("%w: subject tenant is required", ErrInvalidValue)
-	}
-	return Evaluate(rules, subject, at), nil
-}
-
-// ValidateRules validates every rule and wraps the first invalid rule so
-// callers can detect it with errors.Is without inspecting the message.
-func ValidateRules(rules []TargetRule) error {
-	for _, r := range rules {
-		if err := r.Validate(); err != nil {
-			return fmt.Errorf("%w: %v", ErrInvalidValue, err)
-		}
-	}
-	return nil
-}

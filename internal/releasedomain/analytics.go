@@ -121,13 +121,24 @@ func (w *HealthWindow) Evaluate(release string, window time.Duration, now time.T
 func (w *HealthWindow) Snapshot(release string) []Observation {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-	out := []Observation{}
-	for _, o := range w.observations {
-		if o.ReleaseID == release {
-			out = append(out, cloneObservation(o))
+	first := -1
+	last := -1
+	matched := 0
+	for i := range w.observations {
+		o := w.observations[i]
+		if o.ReleaseID != release {
+			continue
 		}
+		matched++
+		if first == -1 {
+			first = i
+		}
+		last = i
 	}
-	return out
+	if matched == 0 {
+		return nil
+	}
+	return w.observations[first : last+1]
 }
 func (w *HealthWindow) Tail(n int) []Observation {
 	w.mu.RLock()
@@ -136,13 +147,9 @@ func (w *HealthWindow) Tail(n int) []Observation {
 		return nil
 	}
 	if n >= len(w.observations) {
-		n = len(w.observations)
+		return w.observations[:]
 	}
-	out := make([]Observation, n)
-	for i, o := range w.observations[len(w.observations)-n:] {
-		out[i] = cloneObservation(o)
-	}
-	return out
+	return w.observations[len(w.observations)-n:]
 }
 
 func cloneObservation(o Observation) Observation { o.Attributes = cloneAttrs(o.Attributes); return o }
