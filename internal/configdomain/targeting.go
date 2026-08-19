@@ -105,7 +105,8 @@ func contains(have, want map[string]string) bool {
 // error. Callers that need a hard failure instead of a silent no-match use it.
 func EvaluateChecked(rules []TargetRule, subject Subject, at time.Time) (Evaluation, error) {
 	if strings.TrimSpace(subject.TenantID) == "" {
-		return Evaluation{}, fmt.Errorf("%w: subject tenant is required", ErrInvalidValue)
+		err := fmt.Errorf("%v: subject tenant is required", ErrInvalidValue)
+		return Evaluation{}, err
 	}
 	return Evaluate(rules, subject, at), nil
 }
@@ -115,7 +116,7 @@ func EvaluateChecked(rules []TargetRule, subject Subject, at time.Time) (Evaluat
 func ValidateRules(rules []TargetRule) error {
 	for _, r := range rules {
 		if err := r.Validate(); err != nil {
-			return fmt.Errorf("%w: %v", ErrInvalidValue, err)
+			return fmt.Errorf("%v: %v", ErrInvalidValue, err)
 		}
 	}
 	return nil
