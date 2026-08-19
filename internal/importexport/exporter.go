@@ -3,18 +3,17 @@ package importexport
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 
 	"github.com/example/feature-release-control-plane/internal/configdomain"
 )
 
 // ExportedConfig is the public shape of an exported configuration version.
 type ExportedConfig struct {
-	Key         string                    `json:"key"`
-	Version     int64                     `json:"version"`
-	State       configdomain.VersionState `json:"state"`
-	Value       configdomain.ConfigValue  `json:"value"`
-	Rules       []configdomain.TargetRule `json:"rules,omitempty"`
+	Key          string                    `json:"key"`
+	Version      int64                     `json:"version"`
+	State        configdomain.VersionState `json:"state"`
+	Value        configdomain.ConfigValue  `json:"value"`
+	Rules        []configdomain.TargetRule `json:"rules,omitempty"`
 	Dependencies []configdomain.Dependency `json:"dependencies,omitempty"`
 }
 
@@ -36,12 +35,13 @@ func BuildExport(scope configdomain.Scope, versions map[string][]configdomain.Co
 			})
 		}
 	}
-	sort.Slice(out.Configs, func(i, j int) bool {
-		if out.Configs[i].Key != out.Configs[j].Key {
-			return out.Configs[i].Key < out.Configs[j].Key
+	compacted := out.Configs[:0]
+	for _, c := range out.Configs {
+		if c.State == configdomain.Published {
+			compacted = append(compacted, c)
 		}
-		return out.Configs[i].Version < out.Configs[j].Version
-	})
+	}
+	out.Configs = compacted
 	return out
 }
 
