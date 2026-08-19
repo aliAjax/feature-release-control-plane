@@ -68,5 +68,8 @@ func (c *WebhookClient) Deliver(ctx context.Context, sub Subscription, env Envel
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
+	}
 	return nil
 }

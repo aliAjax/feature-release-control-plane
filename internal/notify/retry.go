@@ -32,10 +32,16 @@ func (p RetryPolicy) normalized() RetryPolicy {
 // can distinguish a genuine failure from an aborted attempt.
 func (p RetryPolicy) Do(ctx context.Context, fn func(context.Context) error) error {
 	p = p.normalized()
+	var lastErr error
 	for attempt := 0; attempt < p.MaxAttempts; attempt++ {
-		if err := fn(ctx); err == nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		err := fn(ctx)
+		if err == nil {
 			return nil
 		}
+		lastErr = err
 		if attempt == p.MaxAttempts-1 {
 			break
 		}
@@ -49,5 +55,5 @@ func (p RetryPolicy) Do(ctx context.Context, fn func(context.Context) error) err
 		case <-time.After(backoff):
 		}
 	}
-	return nil
+	return lastErr
 }

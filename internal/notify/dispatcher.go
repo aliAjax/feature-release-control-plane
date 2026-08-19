@@ -2,8 +2,13 @@ package notify
 
 import (
 	"context"
+	"errors"
 	"sync"
 )
+
+// ErrDispatcherClosed is returned by Enqueue when the dispatcher has already
+// been closed and can no longer accept events.
+var ErrDispatcherClosed = errors.New("notify: dispatcher closed")
 
 // DeliveryEvent pairs a subscription with the envelope that must be delivered
 // to it. Producers enqueue events and workers drain them so a slow subscriber
@@ -85,6 +90,11 @@ func (d *Dispatcher) worker(ctx context.Context) {
 // producers cannot race with the shutdown sequence and write to a closed
 // channel.
 func (d *Dispatcher) Enqueue(evt DeliveryEvent) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.done {
+		return ErrDispatcherClosed
+	}
 	d.queue <- evt
 	return nil
 }
@@ -94,8 +104,8 @@ func (d *Dispatcher) Enqueue(evt DeliveryEvent) error {
 func (d *Dispatcher) Close() {
 	d.close.Do(func() {
 		d.mu.Lock()
+		defer d.mu.Unlock()
 		d.done = true
-		d.mu.Unlock()
 		close(d.queue)
 	})
 }
