@@ -1,9 +1,6 @@
 package configdomain
 
-import (
-	"fmt"
-	"sort"
-)
+import "sort"
 
 type Graph struct{ Edges map[string][]string }
 
@@ -58,22 +55,4 @@ func (g Graph) HasCycle() bool {
 		}
 	}
 	return false
-}
-
-// DependenciesChecked returns transitive dependencies, reporting a cycle as a
-// wrapped error instead of silently returning the partial traversal.
-func (g Graph) DependenciesChecked(key string) ([]string, error) {
-	if g.HasCycle() {
-		return nil, fmt.Errorf("%w: dependency graph contains a cycle", ErrInvalidValue)
-	}
-	return g.Dependencies(key), nil
-}
-
-// ValidateDependencyGraph reports a cycle as a wrapped error, which is the
-// strict variant used before publishing a dependency set.
-func (g Graph) ValidateDependencyGraph() error {
-	if g.HasCycle() {
-		return fmt.Errorf("%w: dependency graph contains a cycle", ErrInvalidValue)
-	}
-	return nil
 }
