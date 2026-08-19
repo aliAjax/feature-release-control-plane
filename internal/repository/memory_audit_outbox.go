@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -74,10 +73,7 @@ func (m *Memory) ListAuditAll(_ context.Context) ([]audit.Record, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	all := make([]audit.Record, len(m.audits))
-	for i, r := range m.audits {
-		r.Metadata = append(json.RawMessage(nil), r.Metadata...)
-		all[i] = r
-	}
+	copy(all, m.audits)
 	return all, nil
 }
 func (m *Memory) Add(_ context.Context, e OutboxEvent) error {
