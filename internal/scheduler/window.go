@@ -69,13 +69,18 @@ func NextTransition(windows []Window, at time.Time) (time.Time, bool) {
 	return next, found
 }
 
-// ScanActive returns the windows that are active at `at`.
-func ScanActive(_ context.Context, windows []Window, at time.Time) ([]Window, error) {
-	active := make([]Window, 0)
-	for i := range windows {
-		if windows[i].Active(at) {
-			active = append(active, windows[i])
+// ScanActive returns the windows that are active at `at`, aborting as soon as
+// ctx is cancelled. Operators use it to enumerate currently schedulable
+// windows before publishing a rollout.
+func ScanActive(ctx context.Context, windows []Window, at time.Time) ([]Window, error) {
+	out := make([]Window, 0)
+	for _, w := range windows {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if w.Active(at) {
+			out = append(out, w)
 		}
 	}
-	return active, nil
+	return out, nil
 }
