@@ -374,17 +374,6 @@ func (s *Service) AdvanceReleases(ctx context.Context) error {
 					_, _ = s.TransitionVersion(ctx, "scheduler", ref.ConfigID, ref.Version, configdomain.RollingOut, v.Revision)
 				}
 			}
-		case releasedomain.Retrying:
-			next, e := s.TransitionRelease(ctx, "scheduler", r.ID, releasedomain.Running, "", r.FencingToken+1)
-			if e != nil {
-				continue
-			}
-			for _, ref := range next.VersionRefs {
-				v, e := s.configs.GetVersion(ctx, ref.ConfigID, ref.Version)
-				if e == nil && v.State == configdomain.Scheduled {
-					_, _ = s.TransitionVersion(ctx, "scheduler", ref.ConfigID, ref.Version, configdomain.RollingOut, v.Revision)
-				}
-			}
 		case releasedomain.Running:
 			if r.CurrentWave+1 < len(r.Waves) {
 				r.CurrentWave++
@@ -410,23 +399,3 @@ func (s *Service) AdvanceReleases(ctx context.Context) error {
 func (s *Service) id(prefix string) string { return fmt.Sprintf("%s_%x", prefix, s.sequence.Add(1)) }
 
 var ErrUnimplemented = errors.New("not implemented")
-
-// RetryRelease moves a failed release back into the retrying state. The caller
-// must hold the latest fencing token; a stale retry is rejected by Transition.
-func (s *Service) RetryRelease(ctx context.Context, actor, id string) (releasedomain.Release, error) {
-	r, err := s.releases.Get(ctx, id)
-	if err != nil {
-		return r, err
-	}
-	if r.State != releasedomain.Failed {
-		return r, fmt.Errorf("%w: only failed releases can be retried", httpx.ErrPrecondition)
-	}
-	next, err := r.Transition(releasedomain.Retrying, r.FencingToken+1, s.clock.Now())
-	if err != nil {
-		return r, err
-	}
-	if err := s.releases.Update(ctx, next, r.Revision); err != nil {
-		return r, err
-	}
-	return next, nil
-}
