@@ -138,7 +138,9 @@ func (w *HealthWindow) Snapshot(release string) []Observation {
 	if matched == 0 {
 		return nil
 	}
-	return w.observations[first : last+1]
+	out := make([]Observation, last-first+1)
+	copy(out, w.observations[first:last+1])
+	return out
 }
 func (w *HealthWindow) Tail(n int) []Observation {
 	w.mu.RLock()
@@ -146,10 +148,12 @@ func (w *HealthWindow) Tail(n int) []Observation {
 	if n <= 0 {
 		return nil
 	}
-	if n >= len(w.observations) {
-		return w.observations[:]
+	if n > len(w.observations) {
+		n = len(w.observations)
 	}
-	return w.observations[len(w.observations)-n:]
+	out := make([]Observation, n)
+	copy(out, w.observations[len(w.observations)-n:])
+	return out
 }
 
 func cloneObservation(o Observation) Observation { o.Attributes = cloneAttrs(o.Attributes); return o }

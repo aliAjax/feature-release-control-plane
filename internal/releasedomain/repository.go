@@ -34,7 +34,7 @@ func (m *MemoryRepository) Create(_ context.Context, r Release) error {
 	if _, ok := m.releases[r.ID]; ok {
 		return fmt.Errorf("%w: release", httpx.ErrConflict)
 	}
-	m.releases[r.ID] = r
+	m.releases[r.ID] = cloneRelease(r)
 	if r.IdempotencyKey != "" {
 		m.idempotency[r.IdempotencyKey] = r.ID
 	}
@@ -47,7 +47,7 @@ func (m *MemoryRepository) Get(_ context.Context, id string) (Release, error) {
 	if !ok {
 		return r, fmt.Errorf("%w: release", httpx.ErrNotFound)
 	}
-	return r, nil
+	return cloneRelease(r), nil
 }
 func (m *MemoryRepository) Update(_ context.Context, r Release, expected int64) error {
 	m.mu.Lock()
@@ -80,4 +80,14 @@ func (m *MemoryRepository) List(_ context.Context, page, size int) ([]Release, i
 		to = total
 	}
 	return all[from:to], total, nil
+}
+
+func cloneRelease(r Release) Release {
+	refs := make([]VersionRef, len(r.VersionRefs))
+	copy(refs, r.VersionRefs)
+	waves := make([]Wave, len(r.Waves))
+	copy(waves, r.Waves)
+	r.VersionRefs = refs
+	r.Waves = waves
+	return r
 }
