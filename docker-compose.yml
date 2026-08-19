@@ -1,0 +1,17 @@
+services:
+  controlplane:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      CONTROLPLANE_HTTP_ADDRESS: :8080
+      CONTROLPLANE_ADMIN_TOKEN: development-token
+      CONTROLPLANE_SNAPSHOT_SECRET: development-secret-change-me
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: controlplane, POSTGRES_PASSWORD: controlplane, POSTGRES_DB: controlplane }
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U controlplane"], interval: 5s, timeout: 3s, retries: 10 }
+  redis:
+    image: redis:7-alpine

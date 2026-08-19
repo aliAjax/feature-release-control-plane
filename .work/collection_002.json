@@ -1,0 +1,47 @@
+{
+  "sample_id": 102,
+  "session_id": "",
+  "bug_id": "frp-context-cancel-002",
+  "task_type": "diagnosis",
+  "bug_category": "context相关问题",
+  "repo_url": "",
+  "go_version": "golang:1.23; go 1.23.0; GOTOOLCHAIN=local",
+  "repro_determinism": "deterministic",
+  "user_query": "过期扫描这里好怪，我明明把 ctx 取消了，ScanAll 还是继续往后扫，ScanActive 也一样停不下来。文件先不要改，帮我查清楚是哪里的问题。",
+  "trajectory": "",
+  "verify_cmds": "go test ./internal/scheduler -run '^TestScanAllStopsOnCancelledCtx$' -count=1\ngo test ./internal/scheduler -run '^TestScanActiveStopsOnCancelledCtx$' -count=1",
+  "gold_root_cause": "文件: internal/scheduler/expiry.go, internal/scheduler/window.go 符号: ExpiryScanner.ScanGroup, ScanActive 机制: 扫描循环不检查 ctx.Err 继续处理后续分组，取消传播在 ScanGroup 与 ScanActive 两处被切断，导致取消信号无法中止扫描",
+  "gold_patch": "",
+  "success_criteria": "1. 取消后的 ctx 进 ScanAll 和 ScanActive 都得马上返回 Canceled，后面的分组不能再碰；2. 定位过程不能改任何文件，diff 必须为零；3. 结论要写清楚哪个文件哪个函数把取消信号丢了；4. 把两个入口都停不下来的现象讲明白。",
+  "verify_result": "",
+  "harness": "",
+  "generator_model": "",
+  "worker": "",
+  "creator": "",
+  "qc_result": "",
+  "qc_note": "",
+  "sync_feishu": "",
+  "coverage_contract": {
+    "version": 1,
+    "claims": [
+      {
+        "id": "scan_all_honors_cancel",
+        "description": "ScanAll 在 ctx 取消后返回 Canceled",
+        "test": "TestScanAllStopsOnCancelledCtx",
+        "command": "go test ./internal/scheduler -run '^TestScanAllStopsOnCancelledCtx$' -count=1",
+        "paths": [
+          "internal/scheduler/expiry.go"
+        ]
+      },
+      {
+        "id": "scan_active_honors_cancel",
+        "description": "ScanActive 在 ctx 取消后返回 Canceled",
+        "test": "TestScanActiveStopsOnCancelledCtx",
+        "command": "go test ./internal/scheduler -run '^TestScanActiveStopsOnCancelledCtx$' -count=1",
+        "paths": [
+          "internal/scheduler/window.go"
+        ]
+      }
+    ]
+  }
+}

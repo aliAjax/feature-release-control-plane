@@ -1,0 +1,74 @@
+{
+  "sample_id": 101,
+  "session_id": "",
+  "bug_id": "frp-concurrency-drain-001",
+  "task_type": "bugfix",
+  "bug_category": "concurrency并发问题",
+  "repo_url": "",
+  "go_version": "golang:1.23; go 1.23.0; GOTOOLCHAIN=local",
+  "repro_determinism": "deterministic",
+  "user_query": "订阅的 webhook 通知出问题了，失败的时候它不重试，已经取消的请求它还在往外发，把分发器关掉之后还能继续往里塞事件直接 panic。代码就在当前目录，跑一下测试就能看到，麻烦帮我修好这块。",
+  "trajectory": "",
+  "verify_cmds": "go test -race ./internal/notify -run '^TestRetryReturnsErrorAfterAllAttempts$' -count=1\ngo test -race ./internal/notify -run '^TestRetryHonorsCancelledContext$' -count=1\ngo test -race ./internal/notify -run '^TestEnqueueAfterCloseReturnsError$' -count=1\ngo test -race ./internal/notify -run '^TestDeliverReturnsErrorOnServerError$' -count=1\ngo test -race ./internal/notify -run '^TestDispatcherConcurrentEnqueueClose$' -count=1",
+  "gold_root_cause": "文件: internal/notify/retry.go, internal/notify/webhook.go, internal/notify/dispatcher.go 符号: RetryPolicy.Do, WebhookClient.Deliver, Dispatcher.Enqueue 机制: 重试循环吞掉失败与取消上下文，投递吞掉非 2xx 状态，关闭后入队继续向已关闭 channel 发送导致 panic，错误传播链和 channel 生命周期同时断裂",
+  "gold_patch": "",
+  "success_criteria": "1. 重试跑满 3 次后必须报错，取消过的 ctx 不能触发回调；2. 修完后连跑 20 遍这一组命令都得绿；3. 回退重试、关闭或投递状态任何一处改动，对应测试又红；4. 整包回归全过，只看对外表现。",
+  "verify_result": "",
+  "harness": "",
+  "generator_model": "",
+  "worker": "",
+  "creator": "",
+  "qc_result": "",
+  "qc_note": "",
+  "sync_feishu": "",
+  "coverage_contract": {
+    "version": 1,
+    "claims": [
+      {
+        "id": "retry_returns_last_error",
+        "description": "重试耗尽后返回非空错误",
+        "test": "TestRetryReturnsErrorAfterAllAttempts",
+        "command": "go test -race ./internal/notify -run '^TestRetryReturnsErrorAfterAllAttempts$' -count=1",
+        "paths": [
+          "internal/notify/retry.go"
+        ]
+      },
+      {
+        "id": "retry_honors_cancel",
+        "description": "已取消上下文不触发任何回调",
+        "test": "TestRetryHonorsCancelledContext",
+        "command": "go test -race ./internal/notify -run '^TestRetryHonorsCancelledContext$' -count=1",
+        "paths": [
+          "internal/notify/retry.go"
+        ]
+      },
+      {
+        "id": "enqueue_after_close_errors",
+        "description": "关闭后入队返回错误而非 panic",
+        "test": "TestEnqueueAfterCloseReturnsError",
+        "command": "go test -race ./internal/notify -run '^TestEnqueueAfterCloseReturnsError$' -count=1",
+        "paths": [
+          "internal/notify/dispatcher.go"
+        ]
+      },
+      {
+        "id": "deliver_reports_server_error",
+        "description": "5xx 响应必须返回错误",
+        "test": "TestDeliverReturnsErrorOnServerError",
+        "command": "go test -race ./internal/notify -run '^TestDeliverReturnsErrorOnServerError$' -count=1",
+        "paths": [
+          "internal/notify/webhook.go"
+        ]
+      },
+      {
+        "id": "concurrent_enqueue_close_no_panic",
+        "description": "并发 Enqueue 与 Close 不 panic 且无竞态",
+        "test": "TestDispatcherConcurrentEnqueueClose",
+        "command": "go test -race ./internal/notify -run '^TestDispatcherConcurrentEnqueueClose$' -count=1",
+        "paths": [
+          "internal/notify/dispatcher.go"
+        ]
+      }
+    ]
+  }
+}

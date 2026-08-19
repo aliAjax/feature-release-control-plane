@@ -1,0 +1,65 @@
+{
+  "sample_id": 104,
+  "session_id": "",
+  "bug_id": "frp-nil-map-004",
+  "task_type": "bugfix",
+  "bug_category": "nil相关问题",
+  "repo_url": "",
+  "go_version": "golang:1.23; go 1.23.0; GOTOOLCHAIN=local",
+  "repro_determinism": "deterministic",
+  "user_query": "采样器一 Add 就崩，报 nil 指针，聚合 Summaries 也报 assignment to entry in nil map。贴一段关键栈：\npanic: assignment to entry in nil map [recovered, repanicked]\ngoroutine 3 [running]:\ngithub.com/example/feature-release-control-plane/internal/metrics.(*Aggregator).Summaries(...)\n\tinternal/metrics/aggregator.go:52\n麻烦帮我修好。",
+  "trajectory": "",
+  "verify_cmds": "go test ./internal/metrics -run '^TestReservoirAddDoesNotPanic$' -count=1\ngo test ./internal/metrics -run '^TestReservoirCountDoesNotPanic$' -count=1\ngo test ./internal/metrics -run '^TestSummariesReturnsMetricsForEachRelease$' -count=1\ngo test ./internal/metrics -run '^TestStoreReservoirDoesNotPanic$' -count=1",
+  "gold_root_cause": "文件: internal/metrics/sampler.go, internal/metrics/aggregator.go, internal/metrics/store.go 符号: Sampler.NewReservoir, Aggregator.Summaries, Store.Reservoir 机制: 零值构造让 reservoir 的随机源/items/counts 与 store 的 map 都保持 nil，写入 nil map 与解引用 nil 指针直接 panic",
+  "gold_patch": "",
+  "success_criteria": "1. Reservoir 的 Add、Count 和 Store 的第一次取用都不许 panic，Summaries 要按 release 给出汇总；2. 修好以后这四条命令连跑 20 遍全绿；3. 去掉任意一条初始化，对应测试马上又崩又红；4. 完整回归无异常，只看对外表现。",
+  "verify_result": "",
+  "harness": "",
+  "generator_model": "",
+  "worker": "",
+  "creator": "",
+  "qc_result": "",
+  "qc_note": "",
+  "sync_feishu": "",
+  "coverage_contract": {
+    "version": 1,
+    "claims": [
+      {
+        "id": "reservoir_add_no_panic",
+        "description": "Reservoir.Add 不再 nil 解引用",
+        "test": "TestReservoirAddDoesNotPanic",
+        "command": "go test ./internal/metrics -run '^TestReservoirAddDoesNotPanic$' -count=1",
+        "paths": [
+          "internal/metrics/sampler.go"
+        ]
+      },
+      {
+        "id": "reservoir_count_no_panic",
+        "description": "Reservoir.Count 惰性初始化 counts 不 panic",
+        "test": "TestReservoirCountDoesNotPanic",
+        "command": "go test ./internal/metrics -run '^TestReservoirCountDoesNotPanic$' -count=1",
+        "paths": [
+          "internal/metrics/sampler.go"
+        ]
+      },
+      {
+        "id": "summaries_no_panic",
+        "description": "Summaries 不再向 nil map 写入",
+        "test": "TestSummariesReturnsMetricsForEachRelease",
+        "command": "go test ./internal/metrics -run '^TestSummariesReturnsMetricsForEachRelease$' -count=1",
+        "paths": [
+          "internal/metrics/aggregator.go"
+        ]
+      },
+      {
+        "id": "store_reservoir_no_panic",
+        "description": "Store.Reservoir 首次取用不再 panic",
+        "test": "TestStoreReservoirDoesNotPanic",
+        "command": "go test ./internal/metrics -run '^TestStoreReservoirDoesNotPanic$' -count=1",
+        "paths": [
+          "internal/metrics/store.go"
+        ]
+      }
+    ]
+  }
+}

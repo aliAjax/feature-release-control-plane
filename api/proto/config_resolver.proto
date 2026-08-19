@@ -1,0 +1,9 @@
+syntax = "proto3";
+package controlplane.v1;
+option go_package = "github.com/example/feature-release-control-plane/api/gen/go/controlplane/v1";
+service ConfigResolver { rpc Resolve(ResolveRequest) returns (ResolveResponse); rpc Watch(WatchRequest) returns (stream Change); }
+message ResolveRequest { string tenant_id = 1; string application = 2; string environment = 3; string namespace = 4; map<string,string> attributes = 5; map<string,string> labels = 6; string device_id = 7; }
+message ResolveResponse { repeated ResolvedConfig configs = 1; string etag = 2; }
+message ResolvedConfig { string key = 1; bytes value_json = 2; int64 version = 3; string proof = 4; string rule_id = 5; }
+message WatchRequest { string namespace = 1; int64 cursor = 2; }
+message Change { int64 cursor = 1; string type = 2; string resource = 3; int64 version = 4; string occurred_at = 5; }

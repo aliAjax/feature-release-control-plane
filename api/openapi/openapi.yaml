@@ -1,0 +1,46 @@
+openapi: 3.1.0
+info: { title: Feature Release Control Plane, version: 1.0.0, description: Multi-tenant progressive configuration and release API. }
+servers: [{url: http://localhost:8080}]
+paths:
+  /healthz: { get: { responses: {'200': {description: Healthy}} } }
+  /readyz: { get: { responses: {'200': {description: Ready}} } }
+  /api/v1/namespaces:
+    post: { summary: Validate or establish logical namespace, requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Scope'}}}}, responses: {'201': {description: Created}} }
+    get: { summary: Discover namespaces, responses: {'200': {description: OK}} }
+  /api/v1/configs:
+    post: { summary: Create config, requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateConfig'}}}}, responses: {'201': {description: Created}, '409': {$ref: '#/components/responses/Conflict'}} }
+    get: { summary: List configs, parameters: [{$ref: '#/components/parameters/tenant'}, {$ref: '#/components/parameters/application'}, {$ref: '#/components/parameters/environment'}, {$ref: '#/components/parameters/namespace'}], responses: {'200': {description: OK}} }
+  /api/v1/configs/{id}/versions:
+    post: { summary: Create draft, parameters: [{$ref: '#/components/parameters/id'}], requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateVersion'}}}}, responses: {'201': {description: Created}} }
+    get: { summary: List versions, parameters: [{$ref: '#/components/parameters/id'}], responses: {'200': {description: OK}} }
+  /api/v1/configs/{id}/versions/{version}/validate:
+    post: { summary: Validate value, rules and dependency graph, parameters: [{$ref: '#/components/parameters/id'}, {$ref: '#/components/parameters/version'}], responses: {'200': {description: Report}} }
+  /api/v1/configs/{id}/versions/{version}/diff:
+    post: { summary: Compare two versions, parameters: [{$ref: '#/components/parameters/id'}, {$ref: '#/components/parameters/version'}], requestBody: {required: true, content: {application/json: {schema: {type: object, properties: {from: {type: integer}}}}}}, responses: {'200': {description: Diff}} }
+  /api/v1/configs/{id}/versions/{version}/approve:
+    post: { summary: Move a version through review or scheduling, parameters: [{$ref: '#/components/parameters/id'}, {$ref: '#/components/parameters/version'}], requestBody: {required: true, content: {application/json: {schema: {type: object, required: [revision], properties: {revision: {type: integer}, schedule: {type: boolean}}}}}}, responses: {'200': {description: Version}, '412': {$ref: '#/components/responses/Precondition'}} }
+  /api/v1/releases:
+    post: { summary: Create progressive release, parameters: [{name: Idempotency-Key, in: header, schema: {type: string}}], requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Release'}}}}, responses: {'201': {description: Created}} }
+    get: { summary: List releases, responses: {'200': {description: OK}} }
+  /api/v1/releases/{id}/pause: { post: { summary: Pause with fencing token, parameters: [{$ref: '#/components/parameters/id'}], responses: {'200': {description: Paused}} } }
+  /api/v1/releases/{id}/resume: { post: { summary: Resume with fencing token, parameters: [{$ref: '#/components/parameters/id'}], responses: {'200': {description: Resumed}} } }
+  /api/v1/releases/{id}/rollback: { post: { summary: Roll back with fencing token, parameters: [{$ref: '#/components/parameters/id'}], responses: {'200': {description: Rolled back}} } }
+  /api/v1/evaluate: { post: { summary: Resolve stable final configuration, requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Evaluate'}}}}, responses: {'200': {description: Evaluation}, '304': {description: Not modified}} } }
+  /api/v1/stream: { get: { summary: SSE configuration changes, parameters: [{name: namespace, in: query, schema: {type: string}}, {name: cursor, in: query, schema: {type: integer}}], responses: {'200': {description: Event stream, content: {text/event-stream: {schema: {type: string}}}}} } }
+components:
+  parameters:
+    id: {name: id, in: path, required: true, schema: {type: string}}
+    version: {name: version, in: path, required: true, schema: {type: integer}}
+    tenant: {name: tenant_id, in: query, required: true, schema: {type: string}}
+    application: {name: application, in: query, required: true, schema: {type: string}}
+    environment: {name: environment, in: query, required: true, schema: {type: string}}
+    namespace: {name: namespace, in: query, required: true, schema: {type: string}}
+  responses:
+    Conflict: {description: Duplicate resource}
+    Precondition: {description: Optimistic lock mismatch}
+  schemas:
+    Scope: {type: object, required: [tenant_id, application, environment, namespace], properties: {tenant_id: {type: string}, application: {type: string}, environment: {type: string}, namespace: {type: string}}}
+    CreateConfig: {type: object, required: [scope, key], properties: {scope: {$ref: '#/components/schemas/Scope'}, key: {type: string}, description: {type: string}}}
+    CreateVersion: {type: object, required: [value], properties: {value: {type: object}, rules: {type: array, items: {type: object}}, dependencies: {type: array, items: {type: object}}}}
+    Release: {type: object, required: [scope, version_refs, waves], properties: {scope: {type: string}, version_refs: {type: array}, waves: {type: array}}}
+    Evaluate: {type: object, required: [scope, subject], properties: {scope: {$ref: '#/components/schemas/Scope'}, subject: {type: object}}}

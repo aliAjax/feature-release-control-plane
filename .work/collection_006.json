@@ -1,0 +1,65 @@
+{
+  "sample_id": 106,
+  "session_id": "",
+  "bug_id": "frp-defer-swallow-006",
+  "task_type": "diagnosis",
+  "bug_category": "defer相关问题",
+  "repo_url": "",
+  "go_version": "golang:1.23; go 1.23.0; GOTOOLCHAIN=local",
+  "repro_determinism": "deterministic",
+  "user_query": "租约这块 Release 陈旧 owner 的时候不报错，Store.Put 写同版本也不报错。先别改代码，帮我查清楚原因。",
+  "trajectory": "",
+  "verify_cmds": "go test ./internal/fencing -run '^TestPutRejectsStaleWrite$' -count=1\ngo test ./internal/fencing -run '^TestDeleteStaleOwnerFails$' -count=1\ngo test ./internal/fencing -run '^TestReleaseStaleOwnerFails$' -count=1\ngo test ./internal/fencing -run '^TestRenewStaleVersionFails$' -count=1",
+  "gold_root_cause": "文件: internal/fencing/lease.go, internal/fencing/store.go 符号: Manager.Release, Store.Put 机制: 命名返回值配合 defer 把业务错误覆盖成 nil，Put 的解锁 defer 也把 stale 错误吞掉，defer 清理逻辑把原始错误静默丢弃",
+  "gold_patch": "",
+  "success_criteria": "1. 陈旧 owner 或 version 的 Release、同版本 Put 都得报 ErrStaleLease；2. 查的过程中不能改任何代码，差异必须为零；3. 结论要指出吞错的那段 defer 在哪一个文件；4. 说清楚两个入口为什么都把错误变成 nil。",
+  "verify_result": "",
+  "harness": "",
+  "generator_model": "",
+  "worker": "",
+  "creator": "",
+  "qc_result": "",
+  "qc_note": "",
+  "sync_feishu": "",
+  "coverage_contract": {
+    "version": 1,
+    "claims": [
+      {
+        "id": "put_stale_version_fails",
+        "description": "同版本 Put 返回 ErrStaleLease",
+        "test": "TestPutRejectsStaleWrite",
+        "command": "go test ./internal/fencing -run '^TestPutRejectsStaleWrite$' -count=1",
+        "paths": [
+          "internal/fencing/store.go"
+        ]
+      },
+      {
+        "id": "delete_stale_owner_fails",
+        "description": "陈旧 owner Delete 返回 ErrStaleLease",
+        "test": "TestDeleteStaleOwnerFails",
+        "command": "go test ./internal/fencing -run '^TestDeleteStaleOwnerFails$' -count=1",
+        "paths": [
+          "internal/fencing/store.go"
+        ]
+      },
+      {
+        "id": "release_stale_owner_fails",
+        "description": "陈旧 owner Release 返回 ErrStaleLease",
+        "test": "TestReleaseStaleOwnerFails",
+        "command": "go test ./internal/fencing -run '^TestReleaseStaleOwnerFails$' -count=1",
+        "paths": [
+          "internal/fencing/lease.go"
+        ]
+      },
+      {
+        "id": "renew_stale_version_fails",
+        "description": "陈旧版本 Renew 返回 ErrStaleLease",
+        "test": "TestRenewStaleVersionFails",
+        "command": "go test ./internal/fencing -run '^TestRenewStaleVersionFails$' -count=1",
+        "paths": [
+          "internal/fencing/lease.go"
+        ]
+      }
+    ]
+  }
+}

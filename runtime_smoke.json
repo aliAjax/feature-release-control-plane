@@ -1,0 +1,11 @@
+{
+  "mode": "service",
+  "start": "go run ./cmd/controlplane",
+  "workdir": ".",
+  "env": {
+    "CONTROLPLANE_HTTP_ADDRESS": ":18080"
+  },
+  "ready_url": "http://127.0.0.1:18080/healthz",
+  "ready_status": [200, 204],
+  "startup_timeout": 20
+}

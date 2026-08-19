@@ -1,0 +1,4 @@
+{
+  "scope": {"tenant_id": "tenant1", "application": "billing", "environment": "staging", "namespace": "flags"},
+  "configs": [{"key": "new_checkout", "value": {"kind": "boolean", "raw": true}, "rules": [{"id": "beta-canary", "priority": 10, "percentage": 10, "hash_attribute": "device_id", "required_labels": {"cohort": "beta"}, "enabled": true}]}]
+}

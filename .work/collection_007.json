@@ -1,0 +1,83 @@
+{
+  "sample_id": 107,
+  "session_id": "",
+  "bug_id": "frp-concurrency-lock-007",
+  "task_type": "diagnosis",
+  "bug_category": "concurrency并发问题",
+  "repo_url": "",
+  "go_version": "golang:1.23; go 1.23.0; GOTOOLCHAIN=local",
+  "repro_determinism": "deterministic",
+  "user_query": "并发跑 Published 和 PutVersion 一直报 data race，贴一段：\n==================\nWARNING: DATA RACE\nRead at 0x00c00019b5f0 by goroutine 8:\n  github.com/example/feature-release-control-plane/internal/repository.(*Memory).Published()\n      internal/repository/memory.go:179\nPrevious write at 0x00c00019b5f0 by goroutine 9:\n  github.com/example/feature-release-control-plane/internal/repository.(*Memory).PutVersion()\n      internal/repository/memory.go:132\n先别改代码，帮忙查清楚哪里没锁住。",
+  "trajectory": "",
+  "verify_cmds": "go test -race ./internal/repository -run '^TestMemoryConcurrentReadsAndWrites$' -count=1\ngo test -race ./internal/repository -run '^TestMemoryConcurrentAuditAppend$' -count=1\ngo test -race ./internal/repository -run '^TestMemoryConcurrentVersionReads$' -count=1\ngo test -race ./internal/repository -run '^TestPublishedDoesNotAliasInternalRules$' -count=1\ngo test -race ./internal/repository -run '^TestListVersionsDoesNotAliasInternalRules$' -count=1\ngo test -race ./internal/repository -run '^TestListAuditAllReturnsCopy$' -count=1",
+  "gold_root_cause": "文件: internal/repository/memory.go, internal/repository/memory_audit_outbox.go 符号: Memory.Published, Memory.List, Memory.ListVersions, Memory.ListAuditAll 机制: 读路径不加锁直接迭代内部 map，ListAuditAll 返回内部切片引用，Published/ListVersions 返回共享底层数组的 Rules/Dependencies，并发写入与读取共享 map 和底层数组产生竞态和引用逃逸",
+  "gold_patch": "",
+  "success_criteria": "1. -race 跑那两条并发用例必须稳定报 DATA RACE，还要指到 Published、List 和 emit 共用的 map；2. 排查时不能改任何文件，代码差异必须是零；3. 结论要指出没上锁的读路径在哪个文件；4. 讲明白为什么只有并发时才现竞态。",
+  "verify_result": "",
+  "harness": "",
+  "generator_model": "",
+  "worker": "",
+  "creator": "",
+  "qc_result": "",
+  "qc_note": "",
+  "sync_feishu": "",
+  "coverage_contract": {
+    "version": 1,
+    "claims": [
+      {
+        "id": "memory_race_reported",
+        "description": "并发读写 Memory 稳定报竞态",
+        "test": "TestMemoryConcurrentReadsAndWrites",
+        "command": "go test -race ./internal/repository -run '^TestMemoryConcurrentReadsAndWrites$' -count=1",
+        "paths": [
+          "internal/repository/memory.go"
+        ]
+      },
+      {
+        "id": "audit_append_race_reported",
+        "description": "并发 ListAuditAll 与 Append 稳定报竞态",
+        "test": "TestMemoryConcurrentAuditAppend",
+        "command": "go test -race ./internal/repository -run '^TestMemoryConcurrentAuditAppend$' -count=1",
+        "paths": [
+          "internal/repository/memory_audit_outbox.go"
+        ]
+      },
+      {
+        "id": "version_reads_race_reported",
+        "description": "并发 ListVersions 与 PutVersion 稳定报竞态",
+        "test": "TestMemoryConcurrentVersionReads",
+        "command": "go test -race ./internal/repository -run '^TestMemoryConcurrentVersionReads$' -count=1",
+        "paths": [
+          "internal/repository/memory.go"
+        ]
+      },
+      {
+        "id": "published_no_alias",
+        "description": "Published 返回的 Rules 不共享内部引用",
+        "test": "TestPublishedDoesNotAliasInternalRules",
+        "command": "go test -race ./internal/repository -run '^TestPublishedDoesNotAliasInternalRules$' -count=1",
+        "paths": [
+          "internal/repository/memory.go"
+        ]
+      },
+      {
+        "id": "list_versions_no_alias",
+        "description": "ListVersions 返回的 Rules 不共享内部引用",
+        "test": "TestListVersionsDoesNotAliasInternalRules",
+        "command": "go test -race ./internal/repository -run '^TestListVersionsDoesNotAliasInternalRules$' -count=1",
+        "paths": [
+          "internal/repository/memory.go"
+        ]
+      },
+      {
+        "id": "list_audit_all_copy",
+        "description": "ListAuditAll 返回独立副本",
+        "test": "TestListAuditAllReturnsCopy",
+        "command": "go test -race ./internal/repository -run '^TestListAuditAllReturnsCopy$' -count=1",
+        "paths": [
+          "internal/repository/memory_audit_outbox.go"
+        ]
+      }
+    ]
+  }
+}

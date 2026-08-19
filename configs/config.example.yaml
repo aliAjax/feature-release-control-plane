@@ -1,0 +1,9 @@
+http:
+  address: :8080
+security:
+  admin_token: ${CONTROLPLANE_ADMIN_TOKEN}
+  snapshot_secret: ${CONTROLPLANE_SNAPSHOT_SECRET}
+delivery:
+  sse_heartbeat_seconds: 15
+workers:
+  interval_seconds: 1
