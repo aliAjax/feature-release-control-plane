@@ -9,9 +9,9 @@ import (
 // failures and a latency percentile. All fields are computed from the reservoir
 // so no per-request counters need to be kept.
 type HealthMetric struct {
-	ReleaseID  string
-	Samples    int
-	Failures   int
+	ReleaseID string
+	Samples   int
+	Failures  int
 	LatencyP95 time.Duration
 }
 
@@ -47,9 +47,11 @@ func (a *Aggregator) Evaluate(release string, observations []Observation) Health
 // Summaries groups observations by release and returns one metric per release,
 // keyed by release id.
 func (a *Aggregator) Summaries(observations []Observation) map[string]HealthMetric {
-	var out map[string]HealthMetric
+	out := make(map[string]HealthMetric)
 	for _, o := range observations {
-		out[o.ReleaseID] = a.Evaluate(o.ReleaseID, observations)
+		if _, ok := out[o.ReleaseID]; !ok {
+			out[o.ReleaseID] = a.Evaluate(o.ReleaseID, observations)
+		}
 	}
 	return out
 }

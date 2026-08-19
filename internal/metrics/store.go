@@ -13,8 +13,9 @@ type Store struct {
 
 func NewStore(sampler *Sampler, seed int64) *Store {
 	return &Store{
-		sampler: sampler,
-		seed:    seed,
+		sampler:    sampler,
+		reservoirs: make(map[string]*Reservoir),
+		seed:       seed,
 	}
 }
 
@@ -28,6 +29,8 @@ func (s *Store) Reservoir(releaseID string) *Reservoir {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.reservoirs[releaseID] = s.sampler.NewReservoir(s.seed)
+	if s.reservoirs[releaseID] == nil {
+		s.reservoirs[releaseID] = s.sampler.NewReservoir(s.seed)
+	}
 	return s.reservoirs[releaseID]
 }
