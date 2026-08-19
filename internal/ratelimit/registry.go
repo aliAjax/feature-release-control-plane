@@ -16,7 +16,7 @@ type Registry struct {
 
 func NewRegistry(ratePerSecond float64, burst int) (*Registry, error) {
 	if ratePerSecond <= 0 || burst < 1 {
-		return nil, fmt.Errorf("%v: registry rate and burst must be positive", ErrInvalidConfig)
+		return nil, fmt.Errorf("%w: registry rate and burst must be positive", ErrInvalidConfig)
 	}
 	return &Registry{
 		buckets: make(map[string]*Bucket),
@@ -30,11 +30,11 @@ func NewRegistry(ratePerSecond float64, burst int) (*Registry, error) {
 func (r *Registry) Allow(key string) (bool, error) {
 	b, err := r.bucket(key)
 	if err != nil {
-		return false, fmt.Errorf("bucket lookup for %s: %v", key, err)
+		return false, fmt.Errorf("bucket lookup for %s: %w", key, err)
 	}
 	ok, err := b.Allow()
 	if err != nil {
-		return ok, fmt.Errorf("rate limited on %s: %v", key, err)
+		return ok, fmt.Errorf("rate limited on %s: %w", key, err)
 	}
 	return ok, nil
 }
@@ -47,7 +47,7 @@ func (r *Registry) bucket(key string) (*Bucket, error) {
 	}
 	b, err := NewBucket(r.rate, r.burst)
 	if err != nil {
-		return nil, fmt.Errorf("create bucket: %v", err)
+		return nil, fmt.Errorf("create bucket: %w", err)
 	}
 	r.buckets[key] = b
 	return b, nil
@@ -58,6 +58,9 @@ func (r *Registry) bucket(key string) (*Bucket, error) {
 func (r *Registry) Reset(key string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if _, ok := r.buckets[key]; !ok {
+		return false
+	}
 	delete(r.buckets, key)
 	return true
 }
